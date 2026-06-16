@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { workorderApi } from '../api/workorder'
 import { workreportApi } from '../api/workreport'
 
 const pageNum = ref(1)      // 当前第几页
 const pageSize = ref(10)    // 每页几条
 const total = ref(0)        // 总条数（从后端拿到后存起来）
-const totalPages = computed(() => Math.ceil(total.value / pageSize.value)); // 总页数（计算属性，根据 total 和 pageSize 计算得出）
 
 
 const inProgressOrders = ref<any[]>([])   // IN_PROGRESS 工单列表

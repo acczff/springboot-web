@@ -3,7 +3,8 @@ import axios from 'axios';
 import router from '../router';
 
 const request = axios.create({
-    baseURL: 'http://localhost:8080',
+    // 开发环境用 localhost:8080 直连后端；生产环境用相对路径，由 Nginx 反向代理到后端
+    baseURL: import.meta.env.DEV ? 'http://localhost:8080' : '',
     timeout: 5000,
 });
 

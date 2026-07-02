@@ -9,47 +9,64 @@ import { setupDynamicRoutes } from '../utils/permission';
 const userStore = useUserStore();
 const loginForm = ref({
   account: '',
-  password: ''
+  password: '',
 });
 const isLoading = ref(false);
 const errorMsg = ref('');
 
-const handleLogin = async () => {
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error || '登录失败，请稍后重试');
+};
 
-  //验证表单
+const handleLogin = async () => {
+  errorMsg.value = '';
+
   const error = validateLoginForm(loginForm.value.account, loginForm.value.password);
   if (error) {
     errorMsg.value = error;
     return;
   }
 
-  // 初筛通过，开始真正的请求
   isLoading.value = true;
   try {
     const res: any = await userApi.login({
       account: loginForm.value.account,
-      password: loginForm.value.password
+      password: loginForm.value.password,
     });
 
     const token = res.token;
+    if (!token) {
+      throw new Error('登录成功但未返回 token');
+    }
+
     const username = res.username || loginForm.value.account;
-    localStorage.setItem('token', token);  // 先存 token，getMenuList 需要它
+    localStorage.setItem('token', token);
     localStorage.setItem('userId', String(res.userId));
     localStorage.setItem('username', username);
+
     userStore.setUsername(username);
     userStore.setUserId(res.userId);
-    userStore.setRoles(res.roles || [])
-    userStore.setPermissions(res.permissions || [])
-    const menuRes: any = await userApi.getMenuList()
-    await setupDynamicRoutes(menuRes)
+    userStore.setRoles(res.roles || []);
+    userStore.setPermissions(res.permissions || []);
+
+    try {
+      const menuRes: any = await userApi.getMenuList();
+      await setupDynamicRoutes(menuRes || []);
+    } catch (menuError) {
+      console.warn('菜单加载失败，使用基础路由进入系统：', menuError);
+      userStore.setAccessiblePaths(['/home', '/users']);
+    }
+
     router.push('/home');
   } catch (error) {
-    errorMsg.value = String(error);
+    errorMsg.value = getErrorMessage(error);
   } finally {
     isLoading.value = false;
   }
-}
-
+};
 </script>
 
 <template>
@@ -72,7 +89,7 @@ const handleLogin = async () => {
 
       <button class="login-btn" @click.prevent="handleLogin" :disabled="isLoading">
         <span v-if="isLoading">登录中...</span>
-        <span v-else>登 录</span>
+        <span v-else>登录</span>
       </button>
 
       <p class="login-footer">© 2026 学习系统</p>
